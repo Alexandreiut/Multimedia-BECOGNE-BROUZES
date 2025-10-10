@@ -61,13 +61,14 @@
           tl.to(this, { state: 0, duration }, position);
         }
 
-        // Getter / setter animable
+        // Getter 
         get state() { return this._state; }
+        // Setter
         set state(value) {
           if (typeof value !== "number" || isNaN(value)) {
             throw new TypeError("state doit être un nombre réel");
           }
-          // Clamp entre 0 et 1
+          // Force la valeur entre 0 et 1
           this._state = Math.min(1, Math.max(0, value));
 
           // Interpolation couleur (gris -> vert clair)
@@ -76,48 +77,50 @@
         }
       }
 
+      function* HorizontalLine({ number, x, y, spacing = 0, radius = 4 } = {}) {
+        const interval = radius * 2 + spacing; // distance entre deux leds
+
+        for (let i = 0; i < number; i++) {
+          yield { x, y, radius }; // on renvoie les coordonnées actuelles
+          x += interval; // on avance pour la prochaine led
+        }
+      }
+
       /** Représente et dessine un ruban horizontal de leds dans un SVG */
       class LedRibbon {
-        constructor(parent, {
-                    number,
-                    x,
-                    y,
-                    radius = 8,
-                    spacing = 0
-                    } = {}){
-          // liste des leds créées par ce ruban
-            this.leds = []
-            //On créer number de led
-            for(let i=1;i<=number;i++){
-              let led = new Led(svg,x,y,radius)
-              this.leds.push(led);
-              x=x+(radius*2+spacing)*i;
-            }
+        constructor(parent, generator) {
+          this.leds = [];
+
+          // On parcourt toutes les valeurs générées
+          for (const { x, y, radius } of generator) {
+            const led = new Led(parent, x, y, radius);
+            this.leds.push(led);
+          }
         }
+
         reset() {
           this.leds.forEach(led => led.reset());
         }
-        // La méthode demandée :
-        turnOnOff(timeline, durationOn) {
-          const durationAnim = 0.05; // temps d’allumage/extinction rapide
-          let position = 0; // point de départ dans la timeline
 
-          this.leds.forEach((led, i) => {
-            // Allumer
+        // Animation d’allumage/extinction
+        turnOnOff(timeline, durationOn) {
+          const durationAnim = 0.05;
+          let position = 0;
+
+          this.leds.forEach((led) => {
             led.turnOn(timeline, durationAnim, position);
 
-            // Éteindre après la durée "durationOn"
             timeline.to(led.led, {
               fill: "gray",
               duration: durationAnim,
               ease: "none"
             }, position + durationOn);
 
-            // Avancer la position dans la timeline
             position += durationOn;
           });
         }
-      }      
+      }
+
       
             
 
@@ -133,7 +136,7 @@
               .to(led, { state: 0, duration: 1 }, ">+1");
         }
 
-         function animation3() {
+        function animation3() {
           animation1();
           animation2();
         }
@@ -156,13 +159,21 @@
 
       
             //const ribbon = new LedRibbon(svg, 8, 8, 8, 4)
-            const ribbon = new LedRibbon(svg, {number: 16, x: 8, y: 8})
+            //const ribbon = new LedRibbon(svg, {number: 16, x: 8, y: 8})
       const led = new Led(svg, 50, 50, 16)
       // allumer la led puis l'éteindre, dans une timeline
       const TLled = gsap.timeline()
       // /led.turnOn(TLled, 1.0) // allumage en 1 seconde
       // led.turnOff(TLled, 0.5, ">+2")
-      
+
+      const ribbon = new LedRibbon(svg, HorizontalLine({
+                                          number: 16,
+                                          x: 8,
+                                          y: 8,
+                                          spacing: 2,
+                                          radius: 8
+                                        }));
+                                              
       </script>
     </body>
 </html>
