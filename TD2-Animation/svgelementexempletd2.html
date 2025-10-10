@@ -1,0 +1,40 @@
+<div style="margin:12px 0;">
+  <button onclick="demoReset()">Réinitialiser</button>
+  <button onclick="demoTranslateY()">Translation (type y)</button>
+  <button onclick="demoAttrY()">Attribut y (attr:y)</button>
+</div>
+<svg id="demo1" width="420" height="140" viewBox="0 0 420 140" style="border:1px solid #ccc;background:#eef">
+  <text id="demoText" x="210" y="70" text-anchor="middle" style="font:24px sans-serif; fill:#333;">Titre SVG</text>
+</svg>
+<script>
+  const t = document.getElementById('demoText');
+  function demoReset(){
+    t.setAttribute('y','70');
+    t.removeAttribute('transform');
+  }
+  function demoTranslateY(){
+    // Simule un "y" qui agit comme translateY (raccourci GSAP)
+    let start=-60, end=0, dur=600, t0=performance.now();
+    function step(ts){
+      const k=Math.min(1,(ts-t0)/dur);
+      const y = start + (end-start)*k;
+      t.setAttribute('transform', `translate(0 ${y})`);
+      if(k < 1) requestAnimationFrame(step);
+    }
+    demoReset();
+    requestAnimationFrame(step);
+  }
+  function demoAttrY(){
+    // Modifie l'attribut y (équivalent attr:{y})
+    let start=-60, end=70, dur=600, t0=performance.now();
+    function step(ts){
+      const k=Math.min(1,(ts-t0)/dur);
+      const y = start + (end-start)*k;
+      t.setAttribute('y', y);
+      if(k<1) requestAnimationFrame(step);
+    }
+    demoReset();
+    requestAnimationFrame(step);
+  }
+  demoReset();
+</script>
