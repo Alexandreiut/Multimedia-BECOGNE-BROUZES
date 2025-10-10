@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8"/>
+    <title>TP1</title>
+    <!-- voir https://greensock.com/docs/v3/Installation#installer -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  </head>
+    <body>
+
+      <div style="margin: 10px;">
+        <button onclick="resetLed()">Reset</button>
+        <button onclick="animation1()">Animation 1</button>
+        <button onclick="animation2()">Animation 2</button>
+        <button onclick="animation3()">Animation 3</button>
+         <button onclick="animation4()">Animation 4</button>
+      </div>
+      <!-- dessin SVG créé et modifié par les scripts JS -->
+      <svg xmlns="http://www.w3.org/2000/svg"
+              width="100%"
+              id="dessin"
+              viewBox="0 0 200 200">
+      </svg>
+
+      <!-- utilisation du mixin SVGelement -->
+      <script src="svgelement.js"></script>
+
+      <script>
+      // compléments à la librairie Math
+      Math.radians = (deg) => deg * Math.PI / 180
+      Math.degrees = (rad) => rad / Math.PI * 180
+
+      function reset() {
+          gsap.killTweensOf("*");
+      }
+          // ici, il y aura les scripts JS pour créer, modifier et animer l'image SVG (enlever ce commentaire)
+          /** Représente et dessine une led dans un SVG */
+      class Led {
+        constructor(parent, x, y, radius) {
+          this.led = parent.appendElement("circle", {
+            cx: x, cy: y,
+            r: radius - radius / 16,
+            fill: "gray",
+            stroke: "black",
+            "stroke-width": radius / 8
+          });
+          this._state = 0;
+        }
+
+        // Méthode reset
+        reset() {
+          this.state = 0;
+          gsap.killTweensOf(this);
+        }
+
+        // Allumer / éteindre via timeline
+        turnOn(tl, duration = 1, position = ">") {
+          tl.to(this, { state: 1, duration }, position);
+        }
+        turnOff(tl, duration = 1, position = ">") {
+          tl.to(this, { state: 0, duration }, position);
+        }
+
+        // Getter / setter animable
+        get state() { return this._state; }
+        set state(value) {
+          if (typeof value !== "number" || isNaN(value)) {
+            throw new TypeError("state doit être un nombre réel");
+          }
+          // Clamp entre 0 et 1
+          this._state = Math.min(1, Math.max(0, value));
+
+          // Interpolation couleur (gris -> vert clair)
+          const color = gsap.utils.interpolate("gray", "rgb(127,255,0)", this._state);
+          this.led.setAttribute("fill", color);
+        }
+      }
+
+      /** Représente et dessine un ruban horizontal de leds dans un SVG */
+      class LedRibbon {
+        constructor(parent, {
+                    number,
+                    x,
+                    y,
+                    radius = 8,
+                    spacing = 0
+                    } = {}){
+          // liste des leds créées par ce ruban
+            this.leds = []
+            //On créer number de led
+            for(let i=1;i<=number;i++){
+              let led = new Led(svg,x,y,radius)
+              this.leds.push(led);
+              x=x+(radius*2+spacing)*i;
+            }
+        }
+        reset() {
+          this.leds.forEach(led => led.reset());
+        }
+        // La méthode demandée :
+        turnOnOff(timeline, durationOn) {
+          const durationAnim = 0.05; // temps d’allumage/extinction rapide
+          let position = 0; // point de départ dans la timeline
+
+          this.leds.forEach((led, i) => {
+            // Allumer
+            led.turnOn(timeline, durationAnim, position);
+
+            // Éteindre après la durée "durationOn"
+            timeline.to(led.led, {
+              fill: "gray",
+              duration: durationAnim,
+              ease: "none"
+            }, position + durationOn);
+
+            // Avancer la position dans la timeline
+            position += durationOn;
+          });
+        }
+      }      
+      
+            
+
+        function animation1() {
+          led.turnOn(TLled, 0.5);
+          led.turnOff(TLled, 0.5, "+=0.5");
+        }
+
+        function animation2() {
+          resetLed();
+          TLled = gsap.timeline({ defaults: { ease: "none" } });
+          TLled.to(led, { state: 1, duration: 1 })
+              .to(led, { state: 0, duration: 1 }, ">+1");
+        }
+
+         function animation3() {
+          animation1();
+          animation2();
+        }
+
+        function resetLed() {
+          led.reset();
+          TLled.clear();
+        }
+
+        function animation4() {
+          ribbon.reset();
+          const TLrib = gsap.timeline({ defaults: { ease: "none" } });
+          ribbon.turnOnOff(TLrib, 0.05);
+        }
+
+      
+      // dessin SVG
+       const svg = SVGelement.fromSelector("#dessin")      
+
+
+      
+            //const ribbon = new LedRibbon(svg, 8, 8, 8, 4)
+            const ribbon = new LedRibbon(svg, {number: 16, x: 8, y: 8})
+      const led = new Led(svg, 50, 50, 16)
+      // allumer la led puis l'éteindre, dans une timeline
+      const TLled = gsap.timeline()
+      // /led.turnOn(TLled, 1.0) // allumage en 1 seconde
+      // led.turnOff(TLled, 0.5, ">+2")
+      
+      </script>
+    </body>
+</html>
