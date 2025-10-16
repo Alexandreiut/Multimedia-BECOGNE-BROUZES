@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>TD4</title>
+        <!-- voir https://d3js.org/getting-started -->
+        <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    </head>
+    <body>
+        <svg id="dessin"></svg>
+        <script>
+            function ScatterPlot({
+                idsvg="#dessin",
+                titleX="X", getX=d => d.x, titleY="Y", getY=d => d.y, getColor=d => "steelblue",
+                width=400, height=200,
+                margin={top: 20, right: 10, bottom: 30, left: 40}
+                }={}) {
+
+                function dessiner(points) {  // points = iris.json
+                    const svg = d3.select(idsvg);
+                    svg.attr("viewBox", `0 0 ${width} ${height}`);
+
+                    const fX = d3.scaleLinear()
+                        .domain(d3.extent(points, getX))
+                        .range([margin.left, width - margin.right]);
+
+                    const fY = d3.scaleLinear()
+                        .domain(d3.extent(points, getY))
+                        .range([height - margin.bottom, margin.top]);
+
+                    svg.selectAll("g").remove();
+                    svg.selectAll("circle").remove();
+
+                    // Axes
+                    svg.append("g")
+                        .attr("transform", `translate(0,${height - margin.bottom})`)
+                        .call(d3.axisBottom(fX));
+
+                    svg.append("g")
+                        .attr("transform", `translate(${margin.left},0)`)
+                        .call(d3.axisLeft(fY));
+
+                    // Titres axes
+                    const gAxes = svg.append("g")
+                        .attr("font-family", "sans-serif")
+                        .attr("font-size", height / 20)
+                        .style("text-anchor", "end")
+                        .style("fill", "black");
+
+                    gAxes.append("text")
+                        .attr("x", width - margin.right)
+                        .attr("y", height)
+                        .attr("dominant-baseline", "ideographic")
+                        .text(titleX);
+
+                    gAxes.append("text")
+                        .attr("transform", "rotate(-90)")
+                        .attr("x", -margin.top)
+                        .attr("y", 0)
+                        .attr("dominant-baseline", "hanging")
+                        .text(titleY);
+
+                    // Points
+                    svg.selectAll("circle")
+                        .data(points)
+                        .join("circle")
+                        .attr("cx", d => fX(getX(d)))
+                        .attr("cy", d => fY(getY(d)))
+                        .attr("r", width / 100)
+                        .attr("fill", getColor);
+                }
+
+                return dessiner;
+            }
+
+            const colors = {
+                                "setosa": "#69b3a2",
+                                "versicolor": "#a269b3",
+                                "virginica": "#b3a269",
+                            };
+
+            // Création de la fonction de dessin
+            const SC = ScatterPlot({
+                idsvg: "#dessin",
+                titleX: "Sepal Length",
+                getX: d => d.sepalLength,
+                titleY: "Petal Length", 
+                getY: d => d.petalLength,
+                getColor: d => colors[d.species] // assumes colors is défini quelque par           
+            });
+
+            // Appel avec les données
+            d3.json("iris.json").then(SC);
+
+        </script>
+    </body>
+</html>
