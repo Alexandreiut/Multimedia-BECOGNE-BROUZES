@@ -19,18 +19,30 @@
                 return Array.from({length: n + 1}, (_, i) => i);
             }
 
-            function PartitionFloue(trapezes) {
+            
+
+            function PartitionFloue(trapezes, transform=null) {
                 const svg = d3.select("#dessin");
                 const width = 600;
                 const height = width / 4;
                 const margin = {top: 20, right: 10, bottom: 20, left: 10};
                 const N = trapezes.length;
+                const zoom = d3.zoom()
+                .extent([[0, 0], [width, height]])
+                .scaleExtent([0.25, 64])
+                .on("zoom", ({transform}) => PartitionFloue(trapezes, transform))
+                    
+                svg.call(zoom)
 
                 svg.attr("viewBox", `0 0 ${width} ${height}`);
 
-                const fX = d3.scaleLinear()
+                let fX = d3.scaleLinear()
                     .domain([trapezes[0].supL - 1, trapezes[N-1].supH + 1])
                     .range([margin.left, width - margin.right]);
+
+                if(transform != null){ 
+                    fX = transform.rescaleX(fX);
+                }
 
                 const fY = d3.scaleLinear()
                     .domain([0, 1])
@@ -40,53 +52,118 @@
                     .domain(rangeInt(N))
                     .range(d3.schemeSet2);
 
-
                 const bottom = fY(0);
                 const top = fY(1);
 
-                // Axe en bas
-                svg.append("g")
+                // --- Axes ---
+                svg.appendIfAbsent("#x-axis", "g")
+                    .attr("id", "x-axis")
                     .attr("transform", `translate(0, ${bottom})`)
                     .call(d3.axisBottom(fX));
 
-                // Axe en haut
-                svg.append("g")
+                svg.appendIfAbsent("#x-axis-top", "g")
+                    .attr("id", "x-axis-top")
                     .attr("transform", `translate(0, ${top})`)
                     .call(d3.axisTop(fX));
-                
-                // --- Groupe pour les trapèzes ---
-                const grpTrapezes = svg.append("g");
 
-                // Générer un <path> pour chaque trapèze
+                // --- Groupe principal pour les trapèzes ---
+                const grpTrapezes = svg.appendIfAbsent("#grp-trapezes", "g")
+                    .attr("id", "grp-trapezes");
+
+                // --- Trapèzes avec texte ---
                 grpTrapezes
-                    .selectAll("g")  // ← Sélectionner des <g>, pas des <path>
-                    .data(trapezes)
-                    .join(
-                        enter => {
-                            const g = enter.append("g");
-                            
-                            g.append("path")
-                                .attr("d", tr => {
-                                    const points = [
-                                        [fX(tr.corL), bottom],
-                                        [fX(tr.corH), bottom],
-                                        [fX(tr.supH), top],
-                                        [fX(tr.supL), top]
-                                    ];
-                                    return points.map((p, i) => (i === 0 ? "M" : "L") + p.join(",")).join(" ") + " Z";
-                                })
-                                .attr("stroke", "red")
-                                .attr("stroke-width", 2)
-                                .attr("fill", tr => fColor(tr.id))
-                                .attr("fill-opacity", 0.4);
-                            
-                            g.append("text")
-                                .text(trp => trp.nom)
-                                .attr("x", trp => fX((trp.supL + trp.supH) / 2))
-                                .attr("y", (top + bottom) / 2);
-                        }
-                    )
-            }
+                .selectAll("g")
+                .data(trapezes)
+                .join(
+                    enter => {
+                        const g = enter.append("g");
+                        
+                        g.append("path")
+                            .attr("d", tr => {
+                                const points = [
+                                    [fX(tr.supL), bottom],   
+                                    [fX(tr.supH), bottom],   
+                                    [fX(tr.corH), top],      
+                                    [fX(tr.corL), top]       
+                                ];
+                                return points.map((p, i) => (i === 0 ? "M" : "L") + p.join(",")).join(" ") + " Z";
+                            })
+                            .attr("stroke-width", 2)
+                            .attr("fill", tr => fColor(tr.id))
+                            .attr("fill-opacity", 0.4);
+                        
+                        g.append("text")
+                            .text(trp => trp.nom)
+                            .attr("x", trp => fX((trp.corL + trp.corH) / 2))  
+                            .attr("y", (top + bottom) / 2);
+
+                        // Cercle corL
+                        g.append("circle")
+                            .attr("cx", tr => fX(tr.corL))
+                            .attr("cy", top)
+                            .attr("r", 5)
+                            .attr("fill", tr => fColor(tr.id))
+                            .attr("stroke", "black")
+                            .attr("stroke-width", 1);
+
+                        // Cercle corH
+                        g.append("circle")
+                            .attr("cx", tr => fX(tr.corH))
+                            .attr("cy", top)
+                            .attr("r", 5)
+                            .attr("fill", tr => fColor(tr.id))
+                            .attr("stroke", "black")
+                            .attr("stroke-width", 1);
+                    },
+                    update => {
+                        update.select("path")
+                            .attr("d", tr => {
+                                const points = [
+                                    [fX(tr.supL), bottom],  
+                                    [fX(tr.supH), bottom],  
+                                    [fX(tr.corH), top],     
+                                    [fX(tr.corL), top]    
+                                ];
+                                return points.map((p, i) => (i === 0 ? "M" : "L") + p.join(",")).join(" ") + " Z";
+                            })
+                            .attr("fill", tr => fColor(tr.id));
+                        
+                        update.select("text")
+                            .text(trp => trp.nom)
+                            .attr("x", trp => fX((trp.corL + trp.corH) / 2))
+                            .attr("y", (top + bottom) / 2);
+                    }
+                )
+                function onDragCorL(event, trp) {
+                    
+                    let x = fX.invert(event.x);
+
+                    
+                    if (x < trp.supL || x > trp.corH) return;
+
+                    
+                    trp.corL = x;
+
+                    
+                    PartitionFloue(trapezes, transform);
+                }
+
+                function onDragCorH(event, trp) {
+                    
+                    let x = fX.invert(event.x);
+
+                    
+                    if (x < trp.supL || x > trp.corH) return;
+
+                    
+                    trp.corL = x;
+
+                    
+                    PartitionFloue(trapezes, transform);
+                }
+
+        }
+
 
 
             const Trapezes = [
@@ -95,7 +172,12 @@
                 { id: 2, supL: 20, corL: 22, corH: 24, supH: 30, nom: "tiède" },
                 { id: 3, supL: 24, corL: 30, corH: 38, supH: 42, nom: "chaud" },
             ]
-
+            /*const Trapezes2 = [
+                { id: -1, supL: 0, corL: 0, corH: 5, supH: 11, nom: "glacial" },
+                ...Trapezes, // ajout ici des éléments de Trapezes
+                { id: 4, supL: 38, corL: 42, corH: 60, supH: 80, nom: "brûlant" },
+            ]
+            PartitionFloue(Trapezes2)*/
             d3.select("svg")
             .data([Trapezes])
             .each(function(d) {
