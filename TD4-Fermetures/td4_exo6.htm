@@ -7,7 +7,11 @@
     </head>
     <body>
         <svg id="dessin"></svg>
+
+        <button onclick="updateAll">Update data</button>
         <script>
+
+            import { select } from 'https://esm.sh/d3-selection';
             
             // méthode appendIfAbsent pour D3
                 d3.selection.prototype.appendIfAbsent = function(selector, type) {
